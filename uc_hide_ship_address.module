@@ -1,0 +1,129 @@
+<?php
+
+/**
+ * @file
+ * Module hide shipping address pane from checkout.
+ */
+
+/******************************************************************************
+ * Drupal Hooks                                                               *
+ ******************************************************************************/
+
+/**
+ * Implements hook_checkout_pane_alter().
+ */
+function uc_hide_ship_address_checkout_pane_alter(&$panes) {
+  foreach ($panes as &$pane) {
+    if ($pane['id'] == 'simple_quote') {
+      // get and check uc_hide_ship_address variable
+      $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
+      if (empty($uc_hide_ship_address)) {
+        return;
+      }
+
+      // generate js array with methods id's than have hide option
+      $js_id_array = '';
+      foreach ($uc_hide_ship_address as $method_id => $hide) {
+        if ($hide) {
+          $js_id_array .= "hide_id.push('" . $method_id . "---0');";
+        }
+      }
+
+      $js = "
+        $(function() {
+          $('#simple_quote-pane input:radio').click(function() {
+            var hide_id = new Array();" . $js_id_array . "
+            var pane = $('#delivery-pane');
+            if (jQuery.inArray($(this).attr('value'), hide_id) == -1) {
+              pane.show('fast');
+            } else {
+              pane.hide('fast');
+            }
+          }).filter(':checked').click();
+        });";
+      // add js for hiding delivery pane
+      drupal_add_js($js, 'inline');
+    }
+  }
+}
+
+/**
+ * Implements hook_checkout_pane_alter().
+ */
+function uc_hide_ship_address_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'uc_quote_method_settings') {
+    // add checkbox
+    $methods = uc_quote_shipping_method_options();
+    $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
+
+    if (is_array($methods)) {
+      foreach ($methods as $id => $title) {
+        $form['methods'][$id]['uc_hide_ship_address'] = array(
+          '#type' => 'checkbox',
+          '#default_value' => $uc_hide_ship_address[$id],
+        );
+      }
+    }
+    // add submit handler
+    $form['#submit'][] = 'uc_hide_ship_address_method_settings_submit';
+  }
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function uc_hide_ship_address_theme_registry_alter(&$theme_registry) {
+  if (!empty($theme_registry['uc_quote_method_settings'])) {
+    $theme_registry['uc_quote_method_settings']['function'] = 'uc_hide_ship_address_theme_uc_quote_method_settings';
+  }
+}
+
+/******************************************************************************
+ * Module Functions                                                           *
+ ******************************************************************************/
+
+/**
+ * Displays a formatted list of shipping quote methods and form elements
+ * with hide delivery pane option. Overrides theme_uc_quote_method_settings().
+ *
+ * @see uc_quote_method_settings()
+ * @ingroup themeable
+ */
+function uc_hide_ship_address_theme_uc_quote_method_settings($form) {
+  drupal_add_tabledrag('uc-quote-methods', 'order', 'sibling', 'uc-quote-method-weight');
+
+  $header = array(t('Shipping method'), t('List position'), t('Hide delivery pane'));
+  $rows = array();
+  foreach (element_children($form['methods']) as $method) {
+    $row = array(
+      drupal_render($form['methods'][$method]['uc_quote_enabled']),
+      drupal_render($form['methods'][$method]['uc_quote_method_weight']),
+      drupal_render($form['methods'][$method]['uc_hide_ship_address']),
+    );
+
+    $rows[] = array(
+      'data' => $row,
+      'class' => 'draggable',
+    );
+  }
+  $output = theme('table', $header, $rows, array('id' => 'uc-quote-methods'));
+
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ * Additional form submission handler for uc_quote_method_settings().
+ *
+ * @see uc_quote_method_settings()
+ * @see uc_quote_method_settings_validate()
+ */
+function uc_hide_ship_address_method_settings_submit($form, &$form_state) {
+  // save uc_hide_ship_address flag value
+  $uc_hide_ship_address = array();
+  foreach ($form_state['values']['methods'] as $id => $method) {
+    $uc_hide_ship_address[$id] = $method['uc_hide_ship_address'];
+  }
+
+  variable_set('uc_hide_ship_address', $uc_hide_ship_address);
+}

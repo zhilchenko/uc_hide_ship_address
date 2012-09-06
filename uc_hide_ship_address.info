@@ -1,7 +1,7 @@
 name = Hide shipping address
 description = Hides shipping address fields from checkout pane and fills them with default values.
-dependencies[] = uc_order
-package = Ubercart - fulfillment
+dependencies[] = simple_quote
+package = "Ubercart - extra"
 core = 6.x
 php = 5.0
 
