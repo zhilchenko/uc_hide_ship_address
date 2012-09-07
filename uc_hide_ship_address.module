@@ -46,29 +46,30 @@ function uc_hide_ship_address_checkout_pane_alter(&$panes) {
 }
 
 /**
- * Implements hook_checkout_pane_alter().
+ * Implements hook_form_uc_quote_method_settings_alter().
  */
-function uc_hide_ship_address_form_alter(&$form, &$form_state, $form_id) {
-  if ($form_id == 'uc_quote_method_settings') {
-    // add checkbox to admin page
-    $methods = uc_quote_shipping_method_options();
-    $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
+function uc_hide_ship_address_form_uc_quote_method_settings_alter(&$form, &$form_state) {
+  // add checkbox to admin page
+  $methods = uc_quote_shipping_method_options();
+  $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
 
-    if (is_array($methods)) {
-      foreach ($methods as $id => $title) {
-        $form['methods'][$id]['uc_hide_ship_address'] = array(
-          '#type' => 'checkbox',
-          '#default_value' => in_array($id, $uc_hide_ship_address),
-        );
-      }
+  if (is_array($methods)) {
+    foreach ($methods as $id => $title) {
+      $form['methods'][$id]['uc_hide_ship_address'] = array(
+        '#type' => 'checkbox',
+        '#default_value' => in_array($id, $uc_hide_ship_address),
+      );
     }
-    // add submit handler
-    $form['#submit'][] = 'uc_hide_ship_address_method_settings_submit';
   }
-  elseif ($form_id == 'uc_cart_checkout_form') {
-    // add ajax callback to shipping method select
-    $form['#after_build'][] = 'uc_hide_ship_address_checkout_form_after_build';
-  }
+  // add submit handler
+  $form['#submit'][] = 'uc_hide_ship_address_method_settings_submit';
+}
+
+/**
+ * Implements hook_form_uc_cart_checkout_form_alter().
+ */
+function uc_hide_ship_address_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
+  $form['#after_build'][] = 'uc_hide_ship_address_checkout_form_after_build';
 }
 
 /**
