@@ -50,7 +50,7 @@ function uc_hide_ship_address_checkout_pane_alter(&$panes) {
  */
 function uc_hide_ship_address_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'uc_quote_method_settings') {
-    // add checkbox
+    // add checkbox to admin page
     $methods = uc_quote_shipping_method_options();
     $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
 
@@ -64,6 +64,10 @@ function uc_hide_ship_address_form_alter(&$form, &$form_state, $form_id) {
     }
     // add submit handler
     $form['#submit'][] = 'uc_hide_ship_address_method_settings_submit';
+  }
+  elseif ($form_id == 'uc_cart_checkout_form') {
+    // add ajax callback to shipping method select
+    $form['#after_build'][] = 'uc_hide_ship_address_checkout_form_after_build';
   }
 }
 
@@ -126,4 +130,37 @@ function uc_hide_ship_address_method_settings_submit($form, &$form_state) {
   }
 
   variable_set('uc_hide_ship_address', $uc_hide_ship_address);
+}
+
+/**
+ * Callback for uc_cart_checkout_form on after_build.
+ *
+ */
+function uc_hide_ship_address_checkout_form_after_build($form, &$form_state) {
+  // get uc_hide_ship_address variable
+  $uc_hide_ship_address = variable_get('uc_hide_ship_address', array());
+  if (empty($uc_hide_ship_address)) {
+    return $form;
+  }
+  // get method id from radio button value
+  // uc_simple_quote added '---$id' for each method variant, we dont care about it
+  $selected_option = substr($form['panes']['simple_quote']['quote-option']['#value'], 0, -4);;
+  // if user selected method with hide checked
+  if (in_array($selected_option, $uc_hide_ship_address)) {
+    // set required propery to false
+    $required = variable_get('uc_address_fields_required', drupal_map_assoc(array(
+      'first_name',
+      'last_name',
+      'street1',
+      'city',
+      'zone',
+      'postal_code',
+      'country',
+    )));
+    foreach ($required as $key => $field) {
+      $form['panes']['delivery']['delivery_' . $field]['#required'] = FALSE;
+    }
+  }
+
+  return $form;
 }
