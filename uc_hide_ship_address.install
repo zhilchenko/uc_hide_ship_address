@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the uc_hide_ship_address module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function uc_hide_ship_address_uninstall() {
+  variable_del('uc_hide_ship_address');
+}
